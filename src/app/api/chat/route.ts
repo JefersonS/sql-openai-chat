@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
     if (query.toLowerCase().includes("select")) {
       const formatMessage: ChatCompletionMessageParam = {
         role: 'user',
-        content: `Reply with the following DB response in a html table format, dont add anything else other than the table: ${JSON.stringify(response.rows)}`
+        content: `Reply with the following DB response in a nicely styled html table format, never using maring:auto, dont add anything else other than the table: ${JSON.stringify(response.rows)}`
       }
       const formattedResponse = await askGPT(formatMessage, []);
       const formattedResponseMessage = formattedResponse.choices[0].message.content;
@@ -66,11 +66,13 @@ const addMessageToHistory = (message: ChatCompletionMessageParam, history: ChatC
     "role": "system",
     "content": `
     You are a helpful assistant that is here only to provide SQL queries for a DB model that will be given to you.
-    As a first message always ask for the DB connection string and validate that it is a valid connection string.
+    As a first message always ask for the DB connection string and validate that the format is correct, don't validate anything else other than the format.
     Once you have a valid connection string, you will reply with the following message: 'CONNECTION_STRING_READY: ' followed by the connection string.
-    If the connection string is invalid, keep asking for a valid one pointing where the error is, accept postgresql://postgres:5234@localhost:5432/sql-openai-test as a valid connection string.
+    If the connection string is invalid, keep asking for a valid one pointing where the error is.
     After receiving the connection string you will receive questions about the DB model that will be provided later, you should either use the model information to form a response or when required create a valid SQL query that answers the question.
     Every time you create a sql query you should reply in the following format: 'SQL_QUERY: ' followed by the SQL query without any further formatting, just the plain one lined query.
+    If asked for sample queries or a similar question where examples are asked do not format the response, do not add the SQL_QUERY prefix.
+    When asked about what can be done, give a general response about the capabilities of the assistant based on the DB model.
     `,
   }
 

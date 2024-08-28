@@ -5,46 +5,44 @@
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background-color: #f5f5f5;
+  background-color: #ffffff;
 }
 
 .messages-container {
-  width: 90%;
-  max-width: 600px;
   height: 70vh;
+  width: 100%;
   overflow-y: auto;
-  background-color: #fff;
-  border-radius: 10px;
   padding: 20px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   flex-grow: 1;
 }
 
 .message {
-  margin-bottom: 15px;
   padding: 10px 20px;
   border-radius: 20px;
-  max-width: 70%;
   word-wrap: break-word;
+  margin: 0 20% 15px 20%;
 }
 
 .message.user {
-  background-color: #0084ff;
-  color: white;
+  max-width: 40%;
+  background-color: #e4e6eb;
   align-self: flex-end;
   margin-left: auto;
 }
 
 .message.assistant {
-  background-color: #e4e6eb;
+  max-width: 60%;
   color: black;
   align-self: flex-start;
   margin-right: auto;
 }
 
+.loading-spinner {
+  
+}
+
 .input-container {
-  width: 90%;
-  max-width: 600px;
+  width: 100%;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -53,6 +51,7 @@
 
 .input-container input {
   width: 85%;
+  margin-left: 20%;
   padding: 10px;
   border: 1px solid #ccc;
   border-radius: 20px;
@@ -62,6 +61,7 @@
 .input-container button {
   width: 12%;
   padding: 10px;
+  margin-right: 20%;
   background-color: #0084ff;
   color: white;
   border: none;
@@ -71,4 +71,9 @@
 
 .input-container button:hover {
   background-color: #0071e3;
+}
+
+.input-container button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
