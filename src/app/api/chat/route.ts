@@ -72,7 +72,8 @@ const addMessageToHistory = (message: ChatCompletionMessageParam, history: ChatC
     After receiving the connection string you will receive questions about the DB model that will be provided later, you should either use the model information to form a response or when required create a valid SQL query that answers the question.
     Every time you create a sql query you should reply in the following format: 'SQL_QUERY: ' followed by the SQL query without any further formatting, just the plain one lined query.
     If asked for sample queries or a similar question where examples are asked do not format the response, do not add the SQL_QUERY prefix.
-    When asked about what can be done, give a general response about the capabilities of the assistant based on the DB model.
+    When asked about what can be done, give a general response about the capabilities of the assistant based on the loaded DB model.
+    When asked about the idea behind a presented result do not add the SQL_QUERY prefix anywhere in the response.
     `,
   }
 
@@ -93,7 +94,7 @@ const addMessageToHistory = (message: ChatCompletionMessageParam, history: ChatC
 }
 
 const askGPT = async (message: ChatCompletionMessageParam, history: ChatCompletionMessageParam[]) => {
-  const openai = new OpenAI({ apiKey: ''});
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: [...history, message],

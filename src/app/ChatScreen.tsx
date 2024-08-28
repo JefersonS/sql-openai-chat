@@ -22,7 +22,7 @@ const ChatScreen = () => {
       setDisabledSendButton(true);
 
       try {
-        const res = await fetch(`http://localhost:3000/api/chat`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/chat`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
