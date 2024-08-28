@@ -14,4 +14,4 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## SQL Instrospector
 
-This is chat running through Open AI that given a DB connection string can instrospect and run queries using natural language.
+This is a chat running through Open AI that given a DB connection string can instrospect and run queries using natural language.
