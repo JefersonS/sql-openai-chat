@@ -9,56 +9,61 @@ import { ChatCompletionMessageParam } from "openai/resources/index.mjs";
 let connectionString: string;
 let dbModel: unknown[];
 
-export async function POST(request: NextRequest) {  
-  const requestBody = await request.json();
+export async function POST(request: NextRequest) { 
+  try {
+    const requestBody = await request.json();
 
-  const userMessage: ChatCompletionMessageParam = { role: 'user', content: requestBody.message};
-  const history = requestBody.history || [];
-  
-  const completeChat = addMessageToHistory(userMessage, history);
-  const completion = await askGPT(userMessage, completeChat);
+    const userMessage: ChatCompletionMessageParam = { role: 'user', content: requestBody.message};
+    const history = requestBody.history || [];
+    
+    const completeChat = addMessageToHistory(userMessage, history);
+    const completion = await askGPT(userMessage, completeChat);
 
-  const responseMessage = completion.choices[0].message.content;
+    const responseMessage = completion.choices[0].message.content;
 
-  if (responseMessage?.includes("CONNECTION_STRING_READY")) {
-    connectionString = responseMessage.split("CONNECTION_STRING_READY: ")[1];
-    const client = await connect(connectionString);
-    // finds everything present in the public schema
-    const model = await client.query(`
-      SELECT table_schema, table_name, column_name 
-        FROM information_schema.columns 
-      WHERE table_schema in ('public')
-    `);
-    dbModel = model.rows;
-    await client.end();
-    return new Response(JSON.stringify({ message: 'Successfully connected to the database with the connection string! Now you can ask questions about your DB.'}));
-  }
-
-  console.log({completeChat})
-  console.log({responseMessage})
-  if (responseMessage?.includes("SQL_QUERY")) {
-    const client = await connect(connectionString);
-    const query = responseMessage.split("SQL_QUERY: ")[1];
-
-    const response = await client.query(query);
-    await client.end();
-
-    console.log('################################### 2')
-    console.log({data: JSON.stringify(response.rows)})
-    if (query.toLowerCase().includes("select")) {
-      const formatMessage: ChatCompletionMessageParam = {
-        role: 'user',
-        content: `Reply with the following DB response in a nicely styled html table format, never using maring:auto, dont add anything else other than the table: ${JSON.stringify(response.rows)}`
-      }
-      const formattedResponse = await askGPT(formatMessage, []);
-      const formattedResponseMessage = formattedResponse.choices[0].message.content;
-      return new Response(JSON.stringify({message: formattedResponseMessage}));
+    if (responseMessage?.includes("CONNECTION_STRING_READY")) {
+      connectionString = responseMessage.split("CONNECTION_STRING_READY: ")[1];
+      const client = await connect(connectionString);
+      // finds everything present in the public schema
+      const model = await client.query(`
+        SELECT table_schema, table_name, column_name 
+          FROM information_schema.columns 
+        WHERE table_schema in ('public')
+      `);
+      dbModel = model.rows;
+      await client.end();
+      return new Response(JSON.stringify({ message: 'Successfully connected to the database with the connection string! Now you can ask questions about your DB.'}));
     }
 
-    return new Response(JSON.stringify({ message: `Query executed successfully!`}));
-  }
+    console.log({completeChat})
+    console.log({responseMessage})
+    if (responseMessage?.includes("SQL_QUERY")) {
+      const client = await connect(connectionString);
+      const query = responseMessage.split("SQL_QUERY: ")[1];
 
-  return new Response(JSON.stringify({ message: responseMessage}));
+      const response = await client.query(query);
+      await client.end();
+
+      console.log('################################### 2')
+      console.log({data: JSON.stringify(response.rows)})
+      if (query.toLowerCase().includes("select")) {
+        const formatMessage: ChatCompletionMessageParam = {
+          role: 'user',
+          content: `Reply with the following DB response in a nicely styled html table format, never using maring:auto, dont add anything else other than the table: ${JSON.stringify(response.rows)}`
+        }
+        const formattedResponse = await askGPT(formatMessage, []);
+        const formattedResponseMessage = formattedResponse.choices[0].message.content;
+        return new Response(JSON.stringify({message: formattedResponseMessage}));
+      }
+
+      return new Response(JSON.stringify({ message: `Query executed successfully!`}));
+    }
+
+    return new Response(JSON.stringify({ message: responseMessage}));
+  } catch (error) {
+    console.error("Error fetching response from OpenAI:", error);
+    return new Response(JSON.stringify({ message: "Sorry, something went wrong: " + error}));
+  } 
 }
 
 const addMessageToHistory = (message: ChatCompletionMessageParam, history: ChatCompletionMessageParam[]): ChatCompletionMessageParam[] => {
