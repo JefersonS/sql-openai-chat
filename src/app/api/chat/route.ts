@@ -29,6 +29,7 @@ export async function POST(request: NextRequest) {
         SELECT table_schema, table_name, column_name 
           FROM information_schema.columns 
         WHERE table_schema in ('public')
+        ORDER BY table_name
       `);
       dbModel = model.rows;
       await client.end();
@@ -51,9 +52,9 @@ export async function POST(request: NextRequest) {
           role: 'user',
           content: `Reply with the following DB response in a nicely styled html table format, never using maring:auto, dont add anything else other than the table: ${JSON.stringify(response.rows)}`
         }
-        const formattedResponse = await askGPT(formatMessage, []);
-        const formattedResponseMessage = formattedResponse.choices[0].message.content;
-        return new Response(JSON.stringify({message: formattedResponseMessage}));
+        const formattedResponse = formatSQLToHTMLTable(response.rows);
+        console.log({formattedResponse})
+        return new Response(JSON.stringify({message: formattedResponse}));
       }
 
       return new Response(JSON.stringify({ message: `Query executed successfully!`}));
@@ -106,4 +107,23 @@ const askGPT = async (message: ChatCompletionMessageParam, history: ChatCompleti
   });
 
   return completion;
+}
+
+const formatSQLToHTMLTable = (data: unknown[]) => {
+  return `
+  <table style="width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 1em; font-family: Arial, sans-serif; text-align: left; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);">
+    <thead>
+      <tr style="background-color: #000000; color: #ffffff; text-align: left; font-weight: bold;">
+        ${Object.keys(data[0] as object).map((key) => `<th style="padding: 12px 15px; border: 1px solid #ddd;">${key}</th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>
+      ${data.map((row, index) => `
+         <tr style="${index % 2 ? 'background-color: #ffffff;' : 'background-color: #f3f3f3;' }">
+          ${Object.values(row as object).map((value) => `<td style="padding: 12px 15px; border: 1px solid #ddd;">${value}</td>`).join('')}
+        </tr>
+      `).join('')}
+    </tbody>
+  </table>
+  `;
 }
