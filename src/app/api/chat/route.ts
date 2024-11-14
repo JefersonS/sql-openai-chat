@@ -3,21 +3,37 @@ import { type NextRequest } from 'next/server'
 import { connect } from "@/app/utils/dbHelper";
 import { ChatCompletionMessageParam } from "openai/resources/index.mjs";
 
-type DbModel = [{
+type DBSettings = {
+  connectionString: string;
+  dbModel: DbModel;
+  ttl: number;
+}
+
+type DbModel = {
   table_schema: string;
   table_name: string;
   column_name: string;
-}]
+}[]
 
-// Global variable saving connection string and DB Model for in between calls
-// This should be stored in the user session or database in a real application
-// Value is lost when the server is restarted
-let connectionString: string;
-let dbModel: DbModel;
+// silly cache approach to avoid re-fetching the model on every request or sharing models between users
+// TODO: replace for redis or at least add a cleanup function
+const cache = new Map<string, DBSettings>();
 
 export async function POST(request: NextRequest) { 
   try {
+    // TODO: this is a silly aproach on cleaning the cache
+    cleanUpCache();
+    const cacheKey = request.headers.get('x-cache-key') || createNewCacheKey();
     const requestBody = await request.json();
+
+    let dbModel: DbModel = [];
+    let connectionString: string = '';
+
+    if (cache.has(cacheKey)) {
+      const dbSettings = cache.get(cacheKey) as DBSettings;
+      dbModel = dbSettings.dbModel;
+      connectionString = dbSettings.connectionString;
+    }
 
     const userMessage: ChatCompletionMessageParam = { role: 'user', content: requestBody.message};
     const history = requestBody.history || [];
@@ -25,7 +41,7 @@ export async function POST(request: NextRequest) {
     const extractedConnectionString = extractConnectionString(userMessage.content as string);
     if (!connectionString) {
       if (!extractedConnectionString) {
-        return new Response(JSON.stringify({ message: "Please provide a valid connection string to get started." }));
+        return new Response(JSON.stringify({ message: "Please provide a valid connection string to get started." }), { headers: { 'x-cache-key': cacheKey } });
       }
 
       connectionString = extractedConnectionString;
@@ -39,15 +55,17 @@ export async function POST(request: NextRequest) {
       `);
       dbModel = model.rows as DbModel;
       await client.end();
+      
+      cache.set(cacheKey, { connectionString, dbModel, ttl: 3600 });
       return new Response(JSON.stringify(
         {
           message: 'Successfully connected to the database with the connection string! Now you can ask questions about your DB.',
           model: dbModel
         }
-      ));
+      ), { headers: { 'x-cache-key': cacheKey } });
     }
  
-    const completeChat = addMessageToHistory(userMessage, history);
+    const completeChat = addMessageToHistory(userMessage, history, cacheKey);
     const completion = await askGPT(userMessage, completeChat);
 
     const responseMessage = completion.choices[0].message.content;
@@ -61,21 +79,22 @@ export async function POST(request: NextRequest) {
 
       if (query.toLowerCase().includes("select")) {
         const formattedResponse = formatSQLToHTMLTable(response.rows);
-        return new Response(JSON.stringify({message: formattedResponse}));
+        return new Response(JSON.stringify({message: formattedResponse}), { headers: { 'x-cache-key': cacheKey } });
       }
 
       // TODO: update and delete queries may fail and not throw an error, it should be validated here
-      return new Response(JSON.stringify({ message: `Query executed successfully!`}));
+      return new Response(JSON.stringify({ message: `Query executed successfully!`}), { headers: { 'x-cache-key': cacheKey } });
     }
 
-    return new Response(JSON.stringify({ message: responseMessage, model: dbModel }));
+    return new Response(JSON.stringify({ message: responseMessage, model: dbModel }), { headers: { 'x-cache-key': cacheKey } });
   } catch (error) {
     console.error("Error fetching response from OpenAI:", error);
     return new Response(JSON.stringify({ message: "Sorry, something went wrong: " + error}));
   } 
 }
 
-const addMessageToHistory = (message: ChatCompletionMessageParam, history: ChatCompletionMessageParam[]): ChatCompletionMessageParam[] => {
+const addMessageToHistory = (message: ChatCompletionMessageParam, history: ChatCompletionMessageParam[], cacheKey: string): ChatCompletionMessageParam[] => {
+  const dbModel = cache.get(cacheKey)?.dbModel;
   const systemMessage: ChatCompletionMessageParam = {
     "role": "system",
     "content": `
@@ -152,6 +171,23 @@ const extractConnectionString = (message: string): string | null => {
   return matches ? matches[0] : null;
 }
 
+const createNewCacheKey = () => {
+  const key = `${new Date().getTime()}-${Math.random()}`;
+  if (cache.has(key)) {
+    return createNewCacheKey();
+  }
+  return key;
+}
+
+const cleanUpCache = () => {
+  const now = new Date().getTime();
+  cache.forEach((value, key) => {
+    const cacheStartTime = new Date(key.split('-')[0]);
+    if (now - cacheStartTime.getTime() > value.ttl) {
+      cache.delete(key);
+    }
+  });
+}
 
 type Table = {
   tableName: string;
@@ -163,7 +199,11 @@ type Schema = {
   tables: Table[];
 }
 
-const organizeSchemasAndTablesWithColumns = (dbModel: DbModel) => {
+const organizeSchemasAndTablesWithColumns = (dbModel: DbModel | undefined) => {
+  if (!dbModel) {
+    return [];
+  }
+
   const schemaMap = new Map<string, Schema>();
 
   dbModel.forEach(({ table_schema, table_name, column_name }) => {

@@ -19,6 +19,7 @@ const ChatScreen = ({ setTables }: ChatScreenProps) => {
   ]);
   const [inputText, setInputText] = useState("");
   const [disabledSendButton, setDisabledSendButton] = useState(false);
+  const [cacheKey, setCacheKey] = useState("");
 
   // Use memoized function for scrolling
   const scrollToBottom = useCallback(() => {
@@ -40,14 +41,17 @@ const ChatScreen = ({ setTables }: ChatScreenProps) => {
     setDisabledSendButton(true);
 
     try {
+      const headers: { [key: string]: string } = { "Content-Type": "application/json" };
+      if (cacheKey) {
+        headers["X-Cache-Key"] = cacheKey;
+      }
       const res = await fetch(`/api/chat`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({ message: inputText.trim(), history: messages }),
       });
       const data = await res.json();
+      setCacheKey(res.headers.get("x-cache-key") || "");
       const message = data.message;
 
       if (data.model) {
