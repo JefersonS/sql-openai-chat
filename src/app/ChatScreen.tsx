@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { remark } from "remark";
 import html from "remark-html";
 import LoadingIcon from "./icons/LoadingIcon";
@@ -19,6 +19,11 @@ const ChatScreen = ({ setTables }: ChatScreenProps) => {
   ]);
   const [inputText, setInputText] = useState("");
   const [disabledSendButton, setDisabledSendButton] = useState(false);
+
+  // Use memoized function for scrolling
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
   const handleSendMessage = async () => {
     if (inputText.trim() === "") {
@@ -92,13 +97,9 @@ const ChatScreen = ({ setTables }: ChatScreenProps) => {
 
   const messagesEndRef = useRef<null | HTMLDivElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, scrollToBottom]);
 
   return (
     <div className="w-full h-screen flex flex-col justify-center items-center bg-white">
@@ -111,33 +112,35 @@ const ChatScreen = ({ setTables }: ChatScreenProps) => {
               : "bg-white text-black self-start mr-auto max-w-[60%]"
               }`}
           >
-            <div
-              dangerouslySetInnerHTML={{ __html: message.content }}
-            ></div>
+            <div dangerouslySetInnerHTML={{ __html: message.content }} />
           </div>
         ))}
         <div ref={messagesEndRef} />
       </div>
-      <div role="status" hidden={!disabledSendButton}>
-        <LoadingIcon />
-        <span className="sr-only">Loading...</span>
-      </div>
-      <div className="w-full flex justify-between items-center p-2">
+      {disabledSendButton && (
+        <div role="status" className="mt-2">
+          <LoadingIcon />
+          <span className="sr-only">Loading...</span>
+        </div>
+      )}
+      <div className="w-full flex justify-between items-center p-4">
         <input
           type="text"
           placeholder="Type a message..."
           value={inputText}
           onChange={handleInputChange}
           onKeyDown={handleKeyPress}
-          className="w-[85%] ml-[20%] p-2 border border-gray-300 rounded-full text-base"
+          className="w-[85%] ml-[20%] p-2 border border-gray-300 border-r-0 rounded-l-full text-base focus:outline-none"
+          aria-label="Type a message input"
         />
         <button
           onClick={handleSendMessage}
           disabled={disabledSendButton}
-          className={`w-[12%] p-2 mr-[20%] rounded-full ${disabledSendButton
+          className={`w-[12%] p-2 mr-[20%] rounded-r-full border border-gray-300 border-l-0 ${disabledSendButton
             ? "bg-gray-300 cursor-not-allowed"
             : "bg-blue-500 hover:bg-blue-400 text-white"
             }`}
+          aria-label="Send message button"
         >
           Send
         </button>
