@@ -22,9 +22,7 @@ export async function POST(request: NextRequest) {
     const userMessage: ChatCompletionMessageParam = { role: 'user', content: requestBody.message};
     const history = requestBody.history || [];
 
-    console.log(userMessage.content)
     const extractedConnectionString = extractConnectionString(userMessage.content as string);
-    console.log(extractedConnectionString)
     if (!connectionString) {
       if (!extractedConnectionString) {
         return new Response(JSON.stringify({ message: "Please provide a valid connection string to get started." }));
@@ -54,25 +52,19 @@ export async function POST(request: NextRequest) {
 
     const responseMessage = completion.choices[0].message.content;
 
-    console.log({completeChat})
-    console.log({responseMessage})
-    // console.log(completion.choices)
     if (responseMessage?.includes("SQL_QUERY")) {
       const client = await connect(connectionString);
       const query = responseMessage.split("SQL_QUERY: ")[1];
-      console.log({dbModel})
-      console.log({query})
+
       const response = await client.query(query);
       await client.end();
 
-      console.log('################################### 2')
-      console.log({data: JSON.stringify(response.rows)})
       if (query.toLowerCase().includes("select")) {
         const formattedResponse = formatSQLToHTMLTable(response.rows);
-        console.log({formattedResponse})
         return new Response(JSON.stringify({message: formattedResponse}));
       }
 
+      // TODO: update and delete queries may fail and not throw an error, it should be validated here
       return new Response(JSON.stringify({ message: `Query executed successfully!`}));
     }
 

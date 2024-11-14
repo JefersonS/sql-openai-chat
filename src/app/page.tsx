@@ -1,16 +1,14 @@
 "use client";
 import { useState } from 'react';
 import ChatScreen from './ChatScreen';
+import TableListPanel from './components/TableListPanel';
 
 export default function Home() {
   const [tables, setTables] = useState<string[]>([]);
 
   return (
     <div className="App flex flex-row">
-      <div className='m-2 w-[150px]' onClick={() => alert(tables)}>
-        <h1>Found tables: </h1>
-        {tables.map((table, index) => <p key={index}>{table}</p>)}
-      </div>
+      {tables.length > 0 && <TableListPanel tables={tables} />}
       <ChatScreen setTables={setTables} />
     </div>
   );

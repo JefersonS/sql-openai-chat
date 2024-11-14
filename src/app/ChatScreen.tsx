@@ -107,11 +107,11 @@ const ChatScreen = ({ setTables }: ChatScreenProps) => {
         {messages.map((message) => (
           <div
             key={message.id}
-            className={`p-4 rounded-lg break-words my-3 mx-[20%] ${message.role === "user"
-              ? "bg-gray-200 self-end ml-auto max-w-[40%]"
-              : "bg-white text-black self-start mr-auto max-w-[60%]"
+            className={`p-4 rounded-lg break-words my-3 sm:mx-[20%] ${message.role === "user"
+              ? "bg-gray-200 self-end ml-auto max-w-[90%] sm:ml-auto sm:max-w-[40%]"
+              : "bg-white text-black self-start mr-auto max-w-[80%] sm:mr-auto sm:max-w-[60%]"
               }`}
-          >
+          >{/* Repeating ml-auto and mr-right above /\ cause, for some reason, it loses this prop when resizing */}
             <div dangerouslySetInnerHTML={{ __html: message.content }} />
           </div>
         ))}
@@ -130,13 +130,13 @@ const ChatScreen = ({ setTables }: ChatScreenProps) => {
           value={inputText}
           onChange={handleInputChange}
           onKeyDown={handleKeyPress}
-          className="w-[85%] ml-[20%] p-2 border border-gray-300 border-r-0 rounded-l-full text-base focus:outline-none"
+          className="w-[85%] sm:ml-[20%] p-2 border border-gray-300 border-r-0 rounded-l-full text-base focus:outline-none"
           aria-label="Type a message input"
         />
         <button
           onClick={handleSendMessage}
           disabled={disabledSendButton}
-          className={`w-[12%] p-2 mr-[20%] rounded-r-full border border-gray-300 border-l-0 ${disabledSendButton
+          className={`w-[100px] sm:w-[200px] p-2 sm:mr-[20%] rounded-r-full border border-gray-300 border-l-0 ${disabledSendButton
             ? "bg-gray-300 cursor-not-allowed"
             : "bg-blue-500 hover:bg-blue-400 text-white"
             }`}
