@@ -3,57 +3,71 @@ import "./ChatScreen.css";
 import { remark } from 'remark';
 import html from 'remark-html';
 
-const ChatScreen = () => {
+type ChatScreenProps = {
+  setTables: (tables: string[]) => void;
+};
+
+const ChatScreen = ({ setTables }: ChatScreenProps) => {
   const [messages, setMessages] = useState([
-    { id: 1, role: "assistant", content: "Hello, I'm a SQL assistant, please provide a connection string to get started." },
+    { id: 1, role: "assistant", content: `Hi there! I'm your SQL Assistant, ready to make your data talk! To get started, please share your database connection string. Need an example? Here's a quick one: <br><br>
+    postgres://read_only_user:123456@autorack.proxy.rlwy.net:33527/railway <br><br>
+    Once connected, we'll dive straight into querying magic together!` },
   ]);
   const [inputText, setInputText] = useState("");
   const [disabledSendButton, setDisabledSendButton] = useState(false);
 
   const handleSendMessage = async () => {
-    if (inputText.trim() !== "") {
-      const newMessage = {
-        id: messages.length + 1,
-        role: "user",
-        content: inputText.trim(),
-      };
-      setMessages([...messages, newMessage]);
-      setInputText("");
-      setDisabledSendButton(true);
+    if (inputText.trim() === "") {
+      return;
+    }
 
-      try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/chat`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ message: inputText.trim(), history: messages }),
-        })
-        const data = await res.json()
-        console.log({ data })
-        const message = data.message;
+    const newMessage = {
+      id: messages.length + 1,
+      role: "user",
+      content: inputText.trim(),
+    };
+    setMessages([...messages, newMessage]);
+    setInputText("");
+    setDisabledSendButton(true);
 
-        console.log({ message })
-        console.log({ transformed: await transformFromMarkdown(message) })
-        const assistantMessage = {
-          id: messages.length + 2,
-          role: "assistant",
-          content: await transformFromMarkdown(message),
-        };
-        setMessages((prevMessages) => [...prevMessages, assistantMessage]);
-      } catch (error) {
-        console.error("Error fetching response from OpenAI:", error);
-        const assistantMessage = {
-          id: messages.length + 2,
-          role: "assistant",
-          content: "Sorry, something went wrong. Please try again.",
-        };
+    try {
+      const res = await fetch(`/api/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: inputText.trim(), history: messages }),
+      })
+      const data = await res.json()
+      console.log({ data })
+      const message = data.message;
 
-        setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+      if (data.model) {
+        const uniqueTables = data.model.map((v: { table_name: string }) => v.table_name).filter((v: string, i: number, a: string[]) => a.indexOf(v) === i);
+        console.log({ uniqueTables })
+        setTables(uniqueTables);
       }
 
-      setDisabledSendButton(false);
+      console.log({ message })
+      console.log({ transformed: await transformFromMarkdown(message) })
+      const assistantMessage = {
+        id: messages.length + 2,
+        role: "assistant",
+        content: await transformFromMarkdown(message),
+      };
+      setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+    } catch (error) {
+      console.error("Error fetching response from OpenAI:", error);
+      const assistantMessage = {
+        id: messages.length + 2,
+        role: "assistant",
+        content: "Sorry, something went wrong. Please try again.",
+      };
+
+      setMessages((prevMessages) => [...prevMessages, assistantMessage]);
     }
+
+    setDisabledSendButton(false);
   };
 
   const handleInputChange = (e: { target: { value: React.SetStateAction<string>; }; }) => {
