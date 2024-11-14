@@ -2,7 +2,10 @@
 
 This is a chat running through Open AI that given a DB connection string can instrospect and run queries using natural language.
 
-_Still in testing phase._
+_This is just a sample of the full application._
+
+Deployed sample:
+https://sql-openai-chat-production.up.railway.app/
 
 ## Getting Started
 
