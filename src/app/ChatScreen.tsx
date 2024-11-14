@@ -13,7 +13,7 @@ const ChatScreen = ({ setTables }: ChatScreenProps) => {
       id: 1,
       role: "assistant",
       content: `Hi there! I'm your SQL Assistant, ready to make your data talk! To get started, please share your database connection string. Need an example? Here's a quick one: <br><br>
-      postgres://read_only_user:123456@autorack.proxy.rlwy.net:33527/railway <br><br>
+      postgres://read_only_user:123456@junction.proxy.rlwy.net:34216/railway <br><br>
       Once connected, we'll dive straight into querying magic together!`,
     },
   ]);
